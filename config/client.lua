@@ -1,8 +1,18 @@
 return {
+    useTarget = true,
     debugPoly = false,
+    useBlips = true,
+    pedLoc = vec4(436.93, -623.15, 27.71, 89.81),
     allowedVehicles = {
-        {
-            model = `bus`
+        { model = `bus`, rent = 5000, defaultPrice = 3.0 },
+        { model = `bus`, rent = 5000, defaultPrice = 3.0 },
+    },
+    locations = {
+        main = {
+            coords = vec4(437.81, -624.13, 28.71, 82.40),
+        },
+        garage = {
+            coords = vec3(463.46, -634.37, 28.50),
         }
     },
     npcSkins = {
@@ -150,5 +160,9 @@ return {
             'a_m_m_prolhost_01',
             'a_m_m_rurmeth_01'
         }
-    }
+    },
+    busSpawns = {
+        vec4(425.64, -614.44, 28.50, 178.73),
+        vec4(425.20, -642.56, 28.50, 179.34),
+    },
 }

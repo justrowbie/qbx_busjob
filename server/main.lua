@@ -13,11 +13,11 @@ local function isPlayerNearBus(src)
     return false
 end
 
-lib.callback.register('qbx_busjob:server:spawnBus', function(source, model)
+lib.callback.register('qbx_busjob:server:spawnBus', function(source, model, coords)
     local src = source
     local ped = GetPlayerPed(src)
 
-    local netId = qbx.spawnVehicle({ model = model, spawnSource = ped, warp = true })
+    local netId = qbx.spawnVehicle({ model = model, spawnSource = coords, warp = GetPlayerPed(source) })
     if not netId or netId == 0 then return end
     local veh = NetworkGetEntityFromNetworkId(netId)
     if not veh or veh == 0 then return end
@@ -28,14 +28,22 @@ lib.callback.register('qbx_busjob:server:spawnBus', function(source, model)
     return netId
 end)
 
+RegisterNetEvent('qbx_busjob:server:payRentBus', function(amount, type)
+    local src = source
+    local player = exports.qbx_core:GetPlayer(src)
+    if player.Functions.RemoveMoney(type, amount) then
+        exports.qbx_core:Notify(src, locale('success.rent_bus'), 'success', 7500)
+    end
+end)
+
 RegisterNetEvent('qbx_busjob:server:NpcPay', function()
     local src = source
     local player = exports.qbx_core:GetPlayer(src)
     if not isPlayerNearBus(src) then return DropPlayer(src, locale('error.exploit_attempt')) end
 
-    local payment = math.random(15, 25)
+    local payment = config.payPerNPC
     if math.random(1, 100) < config.bonusChance then
-        payment = payment + math.random(10, 20)
+        payment = payment + config.bonusPay
     end
     player.Functions.AddMoney('cash', payment)
 end)

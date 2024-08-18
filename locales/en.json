@@ -5,7 +5,11 @@
         "one_bus_active": "You can only have one active bus at a time",
         "drop_off_passengers": "Drop off the passengers before you stop working",
         "exploit_attempt": "Exploit Attempt",
-        "failed_to_spawn": "Failed to spawn the bus"
+        "failed_to_spawn": "Failed to spawn the bus",
+        "no_money": "You don't have enough money"
+    },
+    "success": {
+        "rent_bus": "You've rented the bus"
     },
     "info": {
         "dropped_off": "Person was dropped off",
@@ -17,6 +21,9 @@
         "bus_stop_work": "[E] - Stop Working",
         "bus_job_vehicles": "[E] - Job Vehicles",
         "bus_header": "Bus Vehicles",
-        "bus_job": "Bus Job"
+        "bus_job": "Bus Job",
+        "request_bus_target": "Rent a Bus",
+        "no_spawn_point": "Unable to find a location to bring the bus",
+        "bus_returned": "Bus Returned"
     }
 }

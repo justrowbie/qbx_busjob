@@ -549,47 +549,50 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
                 end)
             end,
             inside = function()
-                local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
-                local vehicle = GetVehiclePedIsIn(cache.ped)
-                local vehCoords = GetEntityCoords(cache.vehicle)
-                local playerCoords = GetEntityCoords(cache.ped)
-                if freeSeat == maxSeats then exports.qbx_core:Notify('Bis sudah penuh silahkan melanjutkan ke halte berikutnya', 'success', 2500) return end
-                Wait(1000)
-                local closestPed = lib.getNearbyPeds(playerCoords, 20)
-                for i=1, #closestPed do
-                    local pedNetId = PedToNet(closestPed[i].ped)
-                    if pedNetId then
-                        if NpcData.Npc[pedNetId] then
-                            return
-                        else
-                            local pedPass = NetToPed(pedNetId)
-                            NpcData.Npc[pedNetId] = true
-                            if not IsPedInAnyVehicle(pedPass) and not IsPedAPlayer(pedPass) and not IsPedDeadOrDying(pedPass, true) then
-                                exports.qbx_core:Notify('Seorang penumpang menghampiri bis', 'success', 2500)
-                                freeSeat = freeSeat + 1
-                                ClearPedTasksImmediately(pedPass)
-                                if IsEntityPositionFrozen(pedPass) then
-                                    FreezeEntityPosition(pedPass, false)
-                                end
-                                SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetHashKey("PLAYER"))
-                                SetRelationshipBetweenGroups(0, GetHashKey("PLAYER"), GetPedRelationshipGroupHash(pedPass))
-                                SetVehicleDoorsLocked(vehicle, 0)
-                                SetBlockingOfNonTemporaryEvents(pedPass)
-                                TaskEnterVehicle(pedPass, vehicle, -1, freeSeat, 1, 1, 0)
-                                SetPedKeepTask(pedPass, true)
-                                CreateThread(function()
-                                    while true do
-                                        if IsPedInVehicle(pedPass, vehicle, false) then
-                                            print('taken',pedPass)
-                                            TaskSetBlockingOfNonTemporaryEvents(pedPass, true)
-                                            SetBlockingOfNonTemporaryEvents(pedPass, true)
-                                            SetEveryoneIgnorePlayer(PlayerId(), true)
-                                            ClearPedTasks(pedPass)
-                                            break
-                                        end
-                                        Wait(100)
+                if IsControlJustPressed(0, 44) then
+                    exports.qbx_core:Notify('Seorang penumpang menghampiri', 'success', 2500)
+                    local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
+                    local vehicle = GetVehiclePedIsIn(cache.ped)
+                    local vehCoords = GetEntityCoords(cache.vehicle)
+                    local playerCoords = GetEntityCoords(cache.ped)
+                    local closestPed = lib.getNearbyPeds(playerCoords, 20)
+                    print('maxSeats', maxSeats, 'vehicle', vehicle)
+                    for i=1, #closestPed do
+                        local pedNetId = PedToNet(closestPed[i].ped)
+                        print('pedNetId', pedNetId)
+                        if pedNetId then
+                            if NpcData.Npc[pedNetId] then
+                                return
+                            else
+                                local pedPass = NetToPed(pedNetId)
+                                print('freeSeat',freeSeat)
+                                if not IsPedInAnyVehicle(pedPass) and not IsPedAPlayer(pedPass) and not IsPedDeadOrDying(pedPass, true) then
+                                    freeSeat = freeSeat + 1
+                                    ClearPedTasksImmediately(pedPass)
+                                    if IsEntityPositionFrozen(pedPass) then
+                                        FreezeEntityPosition(pedPass, false)
                                     end
-                                end)
+                                    SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetHashKey("PLAYER"))
+                                    SetRelationshipBetweenGroups(0, GetHashKey("PLAYER"), GetPedRelationshipGroupHash(pedPass))
+                                    SetVehicleDoorsLocked(vehicle, 0)
+                                    SetBlockingOfNonTemporaryEvents(pedPass)
+                                    TaskEnterVehicle(pedPass, vehicle, -1, freeSeat, 2.0, 1, 0)
+                                    SetPedKeepTask(pedPass, true)
+                                    CreateThread(function()
+                                        while true do
+                                            if IsPedInVehicle(pedPass, vehicle, false) then
+                                                print('taken',pedPass)
+                                                TaskSetBlockingOfNonTemporaryEvents(pedPass, true)
+                                                SetBlockingOfNonTemporaryEvents(pedPass, true)
+                                                SetEveryoneIgnorePlayer(PlayerId(), true)
+                                                ClearPedTasks(pedPass)
+                                                NpcData.Npc[pedNetId] = true
+                                                break
+                                            end
+                                            Wait(100)
+                                        end
+                                    end)
+                                end
                             end
                         end
                     end

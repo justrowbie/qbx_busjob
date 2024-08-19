@@ -17,7 +17,6 @@ local NpcData = {
     DeliveryBlip = nil,
     NpcTaken = false,
     NpcDelivered = false,
-    CountDown = 180
 }
 
 local BusData = {
@@ -72,7 +71,7 @@ local function resetNpcTask()
         Active = false,
         LastNpc = nil,
         LastDeliver = nil,
-        Npc = nil,
+        Npc = {},
         NpcBlip = nil,
         DeliveryBlip = nil,
         NpcTaken = false,
@@ -165,12 +164,14 @@ local function getDeliveryLocation()
     nextStop()
     removeNPCBlip()
     NpcData.DeliveryBlip = AddBlipForCoord(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z)
-    SetBlipColour(NpcData.DeliveryBlip, 3)
+    SetBlipColour(NpcData.DeliveryBlip, 2)
     SetBlipRoute(NpcData.DeliveryBlip, true)
-    SetBlipRouteColour(NpcData.DeliveryBlip, 3)
+    SetBlipRouteColour(NpcData.DeliveryBlip, 2)
     NpcData.LastDeliver = route
     local inRange = false
     local shownTextUI = false
+    local freeSeat = 1
+    local pedNetId, pedPass = nil, nil
     deliverZone = lib.zones.sphere({
         name = "qbx_busjob_bus_deliver",
         coords = vec3(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z),
@@ -182,28 +183,88 @@ local function getDeliveryLocation()
                 lib.showTextUI(locale('info.busstop_text'))
                 shownTextUI = true
             end
+            if #NpcData.Npc > 0 then
+                local count = #NpcData.Npc
+                CreateThread(function()
+                    while inRange and count > 0 do
+                        Wait(100)
+                        if IsVehicleStopped(GetVehiclePedIsIn(cache.ped)) then
+                            Wait(3000)
+                            for index, ped in pairs(NpcData.Npc) do
+                                count = count - 1
+                                exports.qbx_core:Notify(locale('info.bus_job'), 'info', 7500, locale('info.dropped_off'))
+                                pedPass = ped
+                                TaskLeaveVehicle(pedPass, GetVehiclePedIsIn(cache.ped), 0)
+                                SetEntityAsMissionEntity(pedPass, false, true)
+                                SetEntityAsNoLongerNeeded(pedPass)
+                                TaskWanderStandard(pedPass, 5, 5)
+                                removePed(pedPass)
+                                NpcData.Npc[index] = nil
+                                break
+                            end
+                        end
+                    end
+                end)
+            end
         end,
         inside = function()
             if IsControlJustPressed(0, 38) then
-                TaskLeaveVehicle(NpcData.Npc, cache.vehicle, 0)
-                SetEntityAsMissionEntity(NpcData.Npc, false, true)
-                SetEntityAsNoLongerNeeded(NpcData.Npc)
-                local targetCoords = sharedConfig.npcLocations.locations[NpcData.LastNpc]
-                TaskGoStraightToCoord(NpcData.Npc, targetCoords.x, targetCoords.y, targetCoords.z, 1.0, -1, 0.0, 0.0)
+                removeNPCBlip()
+                resetNpcTask()
+                pedNetId, pedPass = nil, nil
+                local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
+                local vehicle = GetVehiclePedIsIn(cache.ped)
+                local playerCoords = GetEntityCoords(cache.ped)
+                local closestPed = lib.getNearbyPeds(playerCoords, 30)
+                exports.qbx_core:Notify(locale('info.bus_job'), 'info', 7500, 'Kamu mendapatkan '..#closestPed..' penumpang')
+                lib.showTextUI('Tunggu semua penumpang naik')
+                for i=1, #closestPed, 1 do
+                    pedPass = closestPed[i].ped
+                    if freeSeat == maxSeats then return end
+                    if pedPass and not IsPedInAnyVehicle(pedPass) and not IsPedAPlayer(pedPass) and not IsPedDeadOrDying(pedPass, true) then
+                        Wait(3000)
+                        exports.qbx_core:Notify(locale('info.bus_job'), 'info', 2500, 'Seorang penumpang menghampiri')
+                        NpcData.Npc[freeSeat] = pedPass
+                        freeSeat = freeSeat + 1
+                        ClearPedTasks(pedPass)
+                        if IsEntityPositionFrozen(pedPass) then
+                            FreezeEntityPosition(pedPass, false)
+                        end
+                        SetPedRelationshipGroupHash(pedPass, GetPedRelationshipGroupHash(pedPass))
+                        SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetPedRelationshipGroupHash(pedPass))
+                        SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetHashKey("PLAYER"))
+                        SetRelationshipBetweenGroups(0, GetHashKey("PLAYER"), GetPedRelationshipGroupHash(pedPass))
+                        SetVehicleDoorsLocked(vehicle, 0)
+                        SetBlockingOfNonTemporaryEvents(pedPass, true)
+                        TaskEnterVehicle(pedPass, vehicle, -1, freeSeat, 2.0, 1, 0)
+                        CreateThread(function()
+                            while inRange do
+                                if IsPedInVehicle(pedPass, vehicle, false) then
+                                    TaskSetBlockingOfNonTemporaryEvents(pedPass, true)
+                                    SetBlockingOfNonTemporaryEvents(pedPass, true)
+                                    SetEveryoneIgnorePlayer(PlayerId(), true)
+                                    ClearPedTasks(pedPass)
+                                    break
+                                end
+                                Wait(100)
+                            end
+                        end)
+                    end
+                end
                 lib.notify({
                     title = locale('info.bus_job'),
                     description = locale('info.dropped_off'),
                     type = 'success'
                 })
-                removeNPCBlip()
-                removePed(NpcData.Npc)
-                resetNpcTask()
-                nextStop()
-                TriggerEvent('qbx_busjob:client:DoBusNpc')
                 lib.hideTextUI()
                 shownTextUI = false
                 deliverZone:remove()
                 deliverZone = nil
+                getDeliveryLocation()
+                -- resetNpcTask()
+                -- nextStop()
+                -- TriggerEvent('qbx_busjob:client:DoBusNpc')
+
             end
         end,
         onExit = function()
@@ -496,14 +557,6 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
     end
 
     if not NpcData.Active then
-        -- local Gender = math.random(1, #config.npcSkins)
-        -- local PedSkin = math.random(1, #config.npcSkins[Gender])
-        -- local model = joaat(config.npcSkins[Gender][PedSkin])
-        -- lib.requestModel(model, 10000)
-        -- NpcData.Npc = CreatePed(3, model, sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z - 0.98, sharedConfig.npcLocations.locations[route].w, false, true)
-        -- SetModelAsNoLongerNeeded(model)
-        -- PlaceObjectOnGroundProperly(NpcData.Npc)
-        -- FreezeEntityPosition(NpcData.Npc, true)
         NpcData.Npc = {}
         removeNPCBlip()
         NpcData.NpcBlip = AddBlipForCoord(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z)
@@ -514,7 +567,8 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
         NpcData.Active = true
         local inRange = false
         local shownTextUI = false
-        local freeSeat = 0
+        local freeSeat = 1
+        local pedNetId, pedPass = nil, nil
         pickupZone = lib.zones.sphere({
             name = "qbx_busjob_bus_pickup",
             coords = vec3(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z),
@@ -526,76 +580,61 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
                     lib.showTextUI(locale('info.busstop_text'))
                     shownTextUI = true
                 end
-                CreateThread(function()
-                    repeat
-                        Wait(0)
-                        if IsControlJustPressed(0, 38) then
-                            lib.notify({
-                                title = locale('info.bus_job'),
-                                description = locale('info.goto_busstop'),
-                                type = 'info'
-                            })
-                            removeNPCBlip()
-                            getDeliveryLocation()
-                            NpcData.NpcTaken = true
-                            TriggerServerEvent('qbx_busjob:server:NpcPay')
-                            lib.hideTextUI()
-                            shownTextUI = false
-                            pickupZone:remove()
-                            pickupZone = nil
-                            break
-                        end
-                    until not inRange
-                end)
             end,
             inside = function()
-                if IsControlJustPressed(0, 44) then
-                    exports.qbx_core:Notify('Seorang penumpang menghampiri', 'success', 2500)
+                if IsControlJustPressed(0, 38) then
                     local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
                     local vehicle = GetVehiclePedIsIn(cache.ped)
-                    local vehCoords = GetEntityCoords(cache.vehicle)
                     local playerCoords = GetEntityCoords(cache.ped)
-                    local closestPed = lib.getNearbyPeds(playerCoords, 20)
-                    print('maxSeats', maxSeats, 'vehicle', vehicle)
-                    for i=1, #closestPed do
-                        local pedNetId = PedToNet(closestPed[i].ped)
-                        print('pedNetId', pedNetId)
-                        if pedNetId then
-                            if NpcData.Npc[pedNetId] then
-                                return
-                            else
-                                local pedPass = NetToPed(pedNetId)
-                                print('freeSeat',freeSeat)
-                                if not IsPedInAnyVehicle(pedPass) and not IsPedAPlayer(pedPass) and not IsPedDeadOrDying(pedPass, true) then
-                                    freeSeat = freeSeat + 1
-                                    ClearPedTasksImmediately(pedPass)
-                                    if IsEntityPositionFrozen(pedPass) then
-                                        FreezeEntityPosition(pedPass, false)
-                                    end
-                                    SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetHashKey("PLAYER"))
-                                    SetRelationshipBetweenGroups(0, GetHashKey("PLAYER"), GetPedRelationshipGroupHash(pedPass))
-                                    SetVehicleDoorsLocked(vehicle, 0)
-                                    SetBlockingOfNonTemporaryEvents(pedPass)
-                                    TaskEnterVehicle(pedPass, vehicle, -1, freeSeat, 2.0, 1, 0)
-                                    SetPedKeepTask(pedPass, true)
-                                    CreateThread(function()
-                                        while true do
-                                            if IsPedInVehicle(pedPass, vehicle, false) then
-                                                print('taken',pedPass)
-                                                TaskSetBlockingOfNonTemporaryEvents(pedPass, true)
-                                                SetBlockingOfNonTemporaryEvents(pedPass, true)
-                                                SetEveryoneIgnorePlayer(PlayerId(), true)
-                                                ClearPedTasks(pedPass)
-                                                NpcData.Npc[pedNetId] = true
-                                                break
-                                            end
-                                            Wait(100)
-                                        end
-                                    end)
-                                end
+                    local closestPed = lib.getNearbyPeds(playerCoords, 30)
+                    exports.qbx_core:Notify(locale('info.bus_job'), 'info', 7500, 'Kamu mendapatkan '..#closestPed..' penumpang')
+                    lib.showTextUI('Tunggu semua penumpang naik')
+                    for i=1, #closestPed, 1 do
+                        pedPass = closestPed[i].ped
+                        if pedPass and not IsPedInAnyVehicle(pedPass) and not IsPedAPlayer(pedPass) and not IsPedDeadOrDying(pedPass, true) then
+                            if freeSeat == maxSeats then return end
+                            Wait(3000)
+                            print('freeSeat',freeSeat)
+                            exports.qbx_core:Notify(locale('info.bus_job'), 'info', 2500, 'Seorang penumpang menghampiri')
+                            NpcData.Npc[freeSeat] = pedPass
+                            freeSeat = freeSeat + 1
+                            ClearPedTasks(pedPass)
+                            if IsEntityPositionFrozen(pedPass) then
+                                FreezeEntityPosition(pedPass, false)
                             end
+                            SetPedRelationshipGroupHash(pedPass, GetPedRelationshipGroupHash(pedPass))
+                            SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetPedRelationshipGroupHash(pedPass))
+                            SetRelationshipBetweenGroups(0, GetPedRelationshipGroupHash(pedPass), GetHashKey("PLAYER"))
+                            SetRelationshipBetweenGroups(0, GetHashKey("PLAYER"), GetPedRelationshipGroupHash(pedPass))
+                            SetVehicleDoorsLocked(vehicle, 0)
+                            SetBlockingOfNonTemporaryEvents(pedPass, true)
+                            TaskEnterVehicle(pedPass, vehicle, -1, freeSeat, 2.0, 1, 0)
+                            CreateThread(function()
+                                while inRange do
+                                    if IsPedInVehicle(pedPass, vehicle, false) then
+                                        TaskSetBlockingOfNonTemporaryEvents(pedPass, true)
+                                        SetBlockingOfNonTemporaryEvents(pedPass, true)
+                                        SetEveryoneIgnorePlayer(PlayerId(), true)
+                                        ClearPedTasks(pedPass)
+                                        break
+                                    end
+                                    Wait(100)
+                                end
+                            end)
                         end
                     end
+                    lib.notify({
+                        title = locale('info.bus_job'),
+                        description = locale('info.goto_busstop'),
+                        type = 'info'
+                    })
+                    removeNPCBlip()
+                    getDeliveryLocation()
+                    NpcData.NpcTaken = true
+                    lib.hideTextUI()
+                    shownTextUI = false
+                    pickupZone:remove()
+                    pickupZone = nil
                 end
             end,
             onExit = function()

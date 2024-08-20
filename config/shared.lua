@@ -1,5 +1,6 @@
 return {
     usingJob = false,
+    returnVehPercentage = 50,
     npcLocations = {
         locations = {
             vec4(304.36, -764.56, 29.31, 252.09),

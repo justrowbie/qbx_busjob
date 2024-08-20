@@ -4,8 +4,8 @@ return {
     useBlips = true,
     pedLoc = vec4(436.93, -623.15, 27.71, 89.81),
     allowedVehicles = {
-        { model = `bus`, rent = 5000, defaultPrice = 3.0 },
-        { model = `bus`, rent = 5000, defaultPrice = 3.0 },
+        { model = `bus`, rent = 5000, defaultPrice = 3.0, paypernpc = 5.0, label = 'Bus Kota' },
+        { model = `bus`, rent = 2000, defaultPrice = 2.0, paypernpc = 2.0, label = 'Angkot' }
     },
     locations = {
         main = {

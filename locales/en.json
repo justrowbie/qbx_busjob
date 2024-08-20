@@ -15,15 +15,22 @@
         "dropped_off": "Person was dropped off",
         "bus": "Standard Bus",
         "goto_busstop": "Go to the bus stop",
-        "busstop_text": "[E] - Bus Stop",
+        "busstop_text": "[E] - Calling Passengers",
         "bus_plate": "BUS",
         "bus_depot": "Bus Depot",
-        "bus_stop_work": "[E] - Stop Working",
+        "bus_stop_work": "[E] - Return Vehicles",
         "bus_job_vehicles": "[E] - Job Vehicles",
         "bus_header": "Bus Vehicles",
         "bus_job": "Bus Job",
         "request_bus_target": "Rent a Bus",
         "no_spawn_point": "Unable to find a location to bring the bus",
-        "bus_returned": "Bus Returned"
+        "bus_returned": "Bus Returned",
+        "stop_bus": "Stop the bus to drop of the passengers",
+        "can_take_passenger": "You can start taking a passengers",
+        "wait_boarding": "Waiting passengers to board",
+        "got_passenger": "You got a passenger",
+        "no_passenger": "No passenger here. You can continue to the next station",
+        "passenger_coming": "Passenger is coming",
+        "rent_price": " | Rent Price $ "
     }
 }

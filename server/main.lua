@@ -36,14 +36,29 @@ RegisterNetEvent('qbx_busjob:server:payRentBus', function(amount, type)
     end
 end)
 
-RegisterNetEvent('qbx_busjob:server:NpcPay', function()
+RegisterNetEvent('qbx_busjob:server:DistancePay', function(amount)
     local src = source
     local player = exports.qbx_core:GetPlayer(src)
     if not isPlayerNearBus(src) then return DropPlayer(src, locale('error.exploit_attempt')) end
+    local payment = amount
+    player.Functions.AddMoney('cash', payment)
+end)
 
-    local payment = config.payPerNPC
+RegisterNetEvent('qbx_busjob:server:NpcPay', function(amount)
+    local src = source
+    local player = exports.qbx_core:GetPlayer(src)
+    if not isPlayerNearBus(src) then return DropPlayer(src, locale('error.exploit_attempt')) end
+    local payment = amount
     if math.random(1, 100) < config.bonusChance then
         payment = payment + config.bonusPay
     end
     player.Functions.AddMoney('cash', payment)
+end)
+
+RegisterNetEvent('qbx_busjob:server:returnRentBus', function(amount, type)
+    local src = source
+    local player = exports.qbx_core:GetPlayer(src)
+    if player.Functions.AddMoney(type, amount * (sharedConfig.returnVehPercentage/100)) then
+        exports.qbx_core:Notify(src, Lang:t('info.bus_returned'), 'success', 7500)
+    end
 end)

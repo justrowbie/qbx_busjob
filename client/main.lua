@@ -177,6 +177,7 @@ local function getDeliveryLocation()
     local freeSeat = 1
     local pedPass = nil
     local distancePay = #(sharedConfig.npcLocations.locations[NpcData.CurrentRoute].xyz - sharedConfig.npcLocations.locations[NpcData.PreviousRoute].xyz) * BusData.PayPerNpc
+    local controlPressed = false
     deliverZone = lib.zones.sphere({
         name = "qbx_busjob_bus_deliver",
         coords = vec3(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z),
@@ -220,15 +221,15 @@ local function getDeliveryLocation()
             end
         end,
         inside = function()
-            if IsControlJustPressed(0, 38) then
-                TriggerServerEvent('qbx_busjob:server:DistancePay', math.abs(math.floor(distancePay/10)))
+            if not controlPressed and IsControlJustPressed(0, 38) then
+                controlPressed = true
                 removeNPCBlip()
                 resetNpcTask()
                 NpcData.PreviousRoute = route
                 local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
                 local vehicle = GetVehiclePedIsIn(cache.ped)
                 local playerCoords = GetEntityCoords(cache.ped)
-                local closestPed = lib.getNearbyPeds(playerCoords, 30)
+                local closestPed = lib.getNearbyPeds(sharedConfig.npcLocations.locations[NpcData.PreviousRoute].xyz, 10)
                 if #closestPed > 0 then 
                     exports.qbx_core:Notify(locale('info.bus_job'), 'success', 7500, locale('info.got_passenger'))
                     lib.showTextUI(locale('info.wait_boarding'))
@@ -275,6 +276,7 @@ local function getDeliveryLocation()
                 deliverZone:remove()
                 deliverZone = nil
                 getDeliveryLocation()
+                TriggerServerEvent('qbx_busjob:server:DistancePay', math.abs(math.floor(distancePay/10)))
                 -- resetNpcTask()
                 -- nextStop()
                 -- TriggerEvent('qbx_busjob:client:DoBusNpc')
@@ -602,6 +604,7 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
         local freeSeat = 1
         local pedPass = nil
         local distancePay = #(sharedConfig.npcLocations.locations[NpcData.CurrentRoute].xyz - config.pedLoc.xyz) * BusData.PayPerNpc
+        local controlPressed = false
         pickupZone = lib.zones.sphere({
             name = "qbx_busjob_bus_pickup",
             coords = vec3(sharedConfig.npcLocations.locations[route].x, sharedConfig.npcLocations.locations[route].y, sharedConfig.npcLocations.locations[route].z),
@@ -615,13 +618,13 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
                 end
             end,
             inside = function()
-                if IsControlJustPressed(0, 38) then
-                    TriggerServerEvent('qbx_busjob:server:DistancePay', math.abs(math.floor(distancePay/10)))
+                if not controlPressed and IsControlJustPressed(0, 38) then
+                    controlPressed = true
                     NpcData.PreviousRoute = route
                     local maxSeats = GetVehicleMaxNumberOfPassengers(cache.vehicle)
                     local vehicle = GetVehiclePedIsIn(cache.ped)
                     local playerCoords = GetEntityCoords(cache.ped)
-                    local closestPed = lib.getNearbyPeds(playerCoords, 30)
+                    local closestPed = lib.getNearbyPeds(sharedConfig.npcLocations.locations[NpcData.CurrentRoute].xyz, 10)
                     if #closestPed > 0 then 
                         exports.qbx_core:Notify(locale('info.bus_job'), 'success', 7500, locale('info.got_passenger'))
                         lib.showTextUI(locale('info.wait_boarding'))
@@ -675,6 +678,7 @@ RegisterNetEvent('qbx_busjob:client:DoBusNpc', function()
                     shownTextUI = false
                     pickupZone:remove()
                     pickupZone = nil
+                    TriggerServerEvent('qbx_busjob:server:DistancePay', math.abs(math.floor(distancePay/10)))
                 end
             end,
             onExit = function()

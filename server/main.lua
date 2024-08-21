@@ -59,6 +59,6 @@ RegisterNetEvent('qbx_busjob:server:returnRentBus', function(amount, type)
     local src = source
     local player = exports.qbx_core:GetPlayer(src)
     if player.Functions.AddMoney(type, amount * (sharedConfig.returnVehPercentage/100)) then
-        exports.qbx_core:Notify(src, Lang:t('info.bus_returned'), 'success', 7500)
+        exports.qbx_core:Notify(src, locale('info.bus_returned'), 'success', 7500)
     end
 end)
